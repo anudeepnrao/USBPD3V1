@@ -1,4 +1,6 @@
-# RVCE-Latex-Project-Report-Template
+# Integrated Design of a PD Controller and Compliant Power Supply for USB Power Delivery using BCD (Bipolar CMOS and DMOS) Technology
+![image](https://github.com/anudeepnrao/USBPD3V1/assets/17963986/45b81825-35da-4ca5-9002-5342f48dc569)
+
 This is a Latex template is only for RV College of Engineering students for their report writing in latex. You can use this template for both UG and PG mini/major project report writing in Latex.
 
 The template, by defalut generates UG main project.
