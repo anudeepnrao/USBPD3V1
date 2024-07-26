@@ -1,83 +1,86 @@
-\chapter{Introduction to Analog and Digital converters}
+\chapter{Introduction to USB Power Delivery}
 
 \section[Introduction]{\textbf{Introduction}}
-The title of the project can be introduced in this section. This section should neatly elaborate the context of the project, the relevance of the area chosen and the title. You can bring a brief history and arrive at the title of the project. Use appropriate number of paragraphs within this section. 
+The \gls{usb} has become the ubiquitous connector for data transfer and low-power device charging. However, traditional USB standards limited power delivery to 2.5W (USB 1.1) and 4.5W (USB 3.0) \cite{renesas_usb_pd}. This restricted the use of USB for charging power-hungry devices, such as laptops and tablets. To address this limitation, \gls{usbif} introduced the \gls{usbpd} specification \cite{usb_if_usb_charger}.
 
-You are allowed to use figures or diagrams which can help in introducing the topic acknowledging the source. For example , if you are introducing a particular topic, an appropriate figure can be used. The figure should be referenced in the text as Figure. \ref{fig:universe} 
+\gls{usbpd} is a game-changer, enabling significantly higher power delivery (up to 240W) through a single USB cable \cite{usb_if_usb_charger}. This is achieved by introducing intelligent negotiation between the power source and the device being charged. This negotiation allows for flexible voltage and current profiles, optimizing power delivery for various devices. Additionally, USB PD coexists with existing USB data communication standards, offering a unified solution for both data and power \cite{renesas_usb_pd}.
+
+\gls{usbpd} emerged in 2012 alongside the USB-C connector (Fig. \ref{fig:typec_recep}). Prior to its introduction, charging speeds were limited by the USB Battery Charging specification. PD revolutionized this landscape by allowing devices to transfer higher power levels over a USB connection. With a single USB-C cable, it can deliver up to 100 watts of power, making it suitable for smartphones, tablets, and even laptops. The dynamic power negotiation ensures efficient and safe charging, while bi-directional capabilities enable scenarios like laptop-to-phone charging. 
 \begin{figure}[htb]
 \centering
-	\includegraphics[scale=1]{Figures/universe}	
-	\caption{Sample picture of universe }
-	\label{fig:universe}
+	\includegraphics[scale=0.4]{Chapter1/Figures/typec_recep.png}	
+	\caption{USB Type-C Receptacle }
+	\label{fig:typec_recep}
 \end{figure}
 
-These guidelines are provided to formally expose you to the various ethical and technical issues involved in writing up your work and the format you are required to adhere to while submitting your project report.
+The heart of USB PD lies in the USB-C connector, a reversible interface that supports higher power levels. Devices communicate using power profiles to determine optimal power levels during charging. PD dynamically adjusts voltage and current, optimizing speed and safety. This technology has evolved over time, with USB PD 3.1 (released in 2021) supporting up to 240 watts, catering to a wide range of devices and high-power applications.
 
 \section[Motivation]{\textbf{Motivation}}
-
-Brief the motivation of selecting your project title. You can elaborate the challenges in the specific area, relevance and importance of the chosen topic. 
-
+USB PD enables devices to dynamically communicate their power needs. This ensures efficient and rapid charging by adjusting the power supply according to the device's requirements. USB Type-C connector is becoming ubiquitous due to its advantages: cost-effectiveness, backward compatibility with USB 2 and USB 3 standards, increased bandwidth, alternative modes (e.g., HDMI, DisplayPort), and durability.
+%\vspace{0.5cm}
+Implementing USB PD allows one to replace specialized connectors (e.g. barrel jacks) or built-in AC power sources. This reduction in components reduces the amount of electronic waste and reduces costs. Integrating both the PD controller and the power supply into a single chip using a \gls{bcd} node has the following advantages :-
+\begin{enumerate}
+    \item \textbf{Space Efficiency}: By integrating both components into a single chip, you can significantly reduce the overall footprint of your design. This is particularly beneficial for portable devices where space is at a premium.
+    \item \textbf{Cost Reduction}: Integrated designs often lead to cost savings in the manufacturing process as they require fewer materials and less assembly.
+    \item \textbf{Improved Performance}: With both components on the same chip, communication between the PD controller and the power supply can be faster and more efficient, potentially improving the overall performance of the system.
+    \item \textbf{Power Efficiency}: An integrated design can also lead to improved power efficiency, as it reduces the power loss that can occur when signals travel between separate chips.
+    \item \textbf{Reliability}: Having both components on a single chip can increase the reliability of the system by reducing the number of interconnections, which are potential points of failure.
+\end{enumerate}
+Ultimately, the motivation behind this project is to provide a potential solution to the demand for \gls{usbpd} applications that combines the advantages of advanced LDMOS technology with optimized circuitry and layout.
+%\vspace{1cm}
 \section[Problem statement]{\textbf{Problem statement}}
 
-Define the problem statement in this section, in one paragraph.
+Efficiency, reliability, and compliance are major challenges in USB power delivery systems. Integrating a PD controller and power supply with these low parameters is essential.
+
 
 \section[Objectives]{\textbf{Objectives}}
 The objectives of the project are
 \begin{enumerate}
-\item To design a pipelined ADC for audio frequency range
-\item List all the objectives in the above format , starting with "To"
-\item Limit the number of objectives to a maximum of three
+\item To design and implement an \gls{usbpd} 3.1 compliant controller using CMOS Technology.
+\item To design and implement an \gls{usbpd} 3.1 compliant Power Supply using BCD Technology.
+\item To integrate the designed controller and Power Supply.
+\item To evaluate performance metrics of the designed power supply such as transient response and stability and compare the proposed controller with existing designs in terms of performance and area.
 \end{enumerate}
 
 \section[Literature Review]{\textbf{Literature Review}}
-
-A literature review is a text of a scholarly paper, which includes the current knowledge including substantive findings, as well as theoretical and methodological contributions to a particular topic. Literature reviews are secondary sources, and do not report new or original experimental work. Most often associated with academic-oriented literature, such reviews are found in academic journals, and are not to be confused with book reviews that may also appear in the same publication. Literature reviews are a basis for research in nearly every academic field . A narrow-scope literature review may be included as part of a peer-reviewed journal article presenting new research, serving to situate the current study within the body of the relevant literature and to provide context for the reader. In such a case, the review usually precedes the methodology and results sections of the work.
-
-\subsection{Sample}
-The main types of literature reviews are: evaluative, exploratory, and instrumental. A fourth type, the systematic review, is often classified separately, but is essentially a literature review focused on a research question, trying to identify, appraise, select and synthesize all high-quality research evidence and arguments relevant to that question. A meta-analysis is typically a systematic review using statistical methods to effectively combine the data used on all selected studies to produce a more reliable result.
-\subsubsection[Review types]{\textbf{Review types}}
-
-The main types of literature reviews are: evaluative, exploratory, and instrumental. A fourth type, the systematic review, is often classified separately, but is essentially a literature review focused on a research question, trying to identify, appraise, select and synthesize all high-quality research evidence and arguments relevant to that question. A meta-analysis is typically a systematic review using statistical methods to effectively combine the data used on all selected studies to produce a more reliable result.
-
-
-\subsubsection[Process and product]{\textbf{Process and product}}
-
-Distinguish between the process of reviewing the literature and a finished work or product known as a literature review. The process of reviewing the literature is often ongoing and informs many aspects of the empirical research project. All of the latest literature should inform a research project. Scholars need to be scanning the literature long after a formal literature review product appears to be completed.
-
-\subsubsection{\textbf{Page limitation}}
-
-A careful literature review is usually 15 to 30 pages and could be longer. The process of reviewing the literature requires different kinds of activities and ways of thinking and link the activities of doing a literature review with Benjamin Bloom’s revised taxonomy of the cognitive domain (ways of thinking: remembering, understanding, applying, analysing, evaluating, and creating).
-
-This section should contain the review of the literature in the past.You should review a minimum of 10 papers from standard reference journals. Kindly avoid local conference papers and papers from predatory journals. Kindly consult with your guide and finalize papers to be considered for review before adding in this section.Report the major observations and findings from each paper in one paragraph in the format given below.
-
- proposed various techniques for adders and multipliers.Add the reference papers to the bibliography section using Jabref and cite it here using the instructions given in further chapters.
-
-
-\subsubsection{\textbf{Plagiarism}}
-
-To use someone else's exact words without quotation marks and appropriate credit, or to use the unique ideas of someone else without acknowledgement, is known as plagiarism. In publishing, plagiarism is illegal; in other circumstances, it is, at the least, unethical. You may quote or paraphrase the words or ideas of another if you document your source. Although you need not enclose the paraphrased material in quotation marks, you must document the source. 
-
-Paraphrased ideas are taken from someone else whether or not the words are identical. Paraphrasing a passage without citing the source is permissible only when the information paraphrased is common knowledge in a field. (Common knowledge refers to historical, scientific, geographical, technical, and other type of information on a topic readily available in handbooks, manuals, atlases and other references). 
-
-\subsubsection{How to add Reference}
-Use \texttt{Jabref} which will help in adding the reference in a separate file, from which one can use \verb|\citep\{\}| command to add reference. A sample, referring to a textbook would look something like this,\cite{Razavi2000}.
+\subsection{Overview of USB Power Delivery (USB PD)}
+\subsection{The Role of Switching Regulators}
+\subsection{Buck Converters}
+\subsection{Flexible Voltage and Current Levels}
+\subsection{Compliance with USB PD Standards}
 
 \section[Brief Methodology of the project]{\textbf{Brief Methodology of the project}}
-Discuss about the methodology you identified to execute the objectives of your project in brief. Methodology is a system of practices, techniques, procedures, and rules used to execute a particular project. You can elaborate the methodology in a later chapter. Here you can present in the form of a flow diagram and explain the methodology in a paragraph.
+\begin{enumerate}
+    \item \textbf{Designing the Circuit}: The first step is to design the RTL for PD controller and schematic entry for the power supply and its supporting circuitry.
+    \item \textbf{Pre-layout AMS Simulation}: After the schematic design and RTL is complete, the next step is to perform a pre-layout AMS simulation of both devices using Spectre AMS. This involves applying the appropriate input signals to the circuit and observing the output signals. The simulation should verify that the circuit meets the desired performance metrics, such as output voltage, dropout voltage, current regulation, transient response, and stability.
+    \item \textbf{Layout Generation}: After the pre-layout simulation confirms that the schematic design meets the desired performance metrics, the next step is to generate the layout of the power supply circuit using Cadence Virtuoso and controller through digital PNR flow. The layout should be designed in such a way that it minimizes the area of the circuit while maintaining the performance of the circuit. The layout should also take into account the design rules of the 45nm CMOS technology node.
+    \item \textbf{Parasitic Extraction}: Once the layout is complete, the next step is to extract the parasitics of the circuit using Quantus RC. This involves identifying the parasitic resistances, capacitances, and inductances in the circuit that can affect the performance of the circuit. The extracted parasitics are then back-annotated to the schematic.
+    \item \textbf{Post-layout AMS Simulation}: After the parasitics are back-annotated to the schematic, the next step is to perform a post-layout AMS simulation of the circuit using Spectre AMS. This involves applying the appropriate input signals to the circuit and observing the output signals. The simulation should verify that the circuit meets the desired performance metrics, taking into account the effects of the extracted parasitics.
+    \item \textbf{Performance Evaluation and Comparison}: The final step is to evaluate the performance of the circuit and compare it with existing designs. This involves analyzing the simulation results and determining whether the circuit meets the desired performance metrics. The performance of the circuit should also be compared with existing designs in terms of performance and area to understand the impact of the CMOS technology node on the performance and area.
+\end{enumerate}
+
+This methodology provides a more comprehensive approach to designing and implementing an Integrated PD controller, taking into account both the schematic design and the physical layout of the circuit. It is designed to be comprehensible to both academia and industry professionals, and it provides a clear path from the initial design of the circuit to the final evaluation of its performance. 
 
 \section[Assumptions made / Constraints of the project]{\textbf{Assumptions made / Constraints of the project}}
 
-List the assumptions made for the execution of the project in this section. You can also elaborate on the major constraints of the project. This section should clearly state under what conditions your project is valid. It is mandatory to have this section in your project report.
+When designing a system with high power levels, it is crucial to protect the user and system from any harmful events that can happen on the power path. The most difficult event to protect against is a VBUS short to ground. In this instance, the current on VBUS will spike rapidly; it is up to the power path to open the FET immediately before it is damaged by these high current levels. If the FET does not open quickly enough, the spiked current can damage the FET and the rest of the system.
+
+Many USB PD controllers on the market do not integrate the power paths. It is up to the hardware designer to implement protections using discrete components. 
+ Implementing an overcurrent protection scheme discretely can be tedious; it usually involves using a sense resistor with a current-sense amplifier. The output of the current-sense amplifier is then fed into a comparator that will trigger a fault GPIO on the USB PD controller, or activate circuitry to disable the gate of the VBUS FET. 
+ 
+This is not the best solution, as it’s not possible to adjust the overcurrent trip point once the comparator is set. In the event of a VBUS short to ground, it will take longer for a discrete solution to detect the short and open the FET than it would for the integrated power path to detect it.
+
+In this work, \gls{pcl} is implemented. During overcurrent, the output voltage drops. Similarly, if VBUS shorts, the Gate-Source voltage of the PMOS pass element falls below \(Vthp\), turning off the PMOS.
 
 \section[Organization of the report]{\textbf{Organization of the report}}
 
-This report is organized as follows. Write the discussions in each chapter. A sample is as follows.
+This report is organized as follows.  
 \begin{itemize}
-\item Chapter 2 discusses the fundamentals of ADC and the performance parameters for evaluation.
-\item Chapter 3 discusses .
-\item Chapter 4 discusses .
-\item Chapter 5 discusses .
-\item Chapter 6 discusses .
+\item Chapter 2 discusses the fundamentals of \gls{usbpd}. 
+\item Chapter 3 discusses the design of \gls{usbpd} controller and power supply.
+\item Chapter 4 discusses the implementation of the design and the performance parameters for evaluation.
+\item Chapter 5 discusses the results of tests used to validate the implemented design.
+\item Chapter 6 discusses the conclusion and future scope of this project.
 \end{itemize}
 
 .
