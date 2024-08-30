@@ -3,7 +3,7 @@
 
 This is a Latex template is only for RV College of Engineering students for their report writing in latex. You can use this template for both UG and PG mini/major project report writing in Latex.
 
-The template, by defalut generates UG main project.
+This template, by default, generates UG main project.
 
 ## For PG project report, uncomment the following command in `Main.tex` file
 

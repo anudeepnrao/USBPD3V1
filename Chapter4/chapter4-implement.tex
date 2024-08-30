@@ -1,30 +1,672 @@
 \chapter{Implementation and Validation}
 
-\indent\indent From Chapter 2 onwards, every chapter should start with an introduction paragraph. This paragraph should brief about the flow of the chapter. This introduction can be limited within 4 to 5 sentences. The chapter heading should be appropriately modified (a sample heading is shown for this chapter).But don't start the introduction paragraph in the chapters 2 to end with "This chapter deals with....". Instead you should bring in the highlights of the chapter in the introduction paragraph. 
+\indent\indent In this chapter, we explore the practical steps involved in implementing the integrated controller and compliant power supply for USB Power Delivery (USB PD) using Cadence tools. The implementation phase bridges the gap between theoretical design and a functional prototype, ensuring that all components work together seamlessly to meet USB PD standards. 
 
-\section{Contents of this chapter}
-This chapter should elaborate the following in detail.
-\begin{enumerate}
-\item Implementation details for hardware based projects
-\item Top level Design for software based projects
-\end{enumerate}
+
 \section{Power Delivery Controller}
-You can add sections and sub sections to elaborate your project work done.
+
 \subsection{RTL Design}
+\subsubsection{usb\textunderscore pd\textunderscore phy\textunderscore rd}
+\begin{figure}[h]
+    \centering
+    \begin{tikzpicture}[scale=0.2]
+\tikzstyle{every node}+=[inner sep=0pt]
+\draw [black] (37.1,-8.2) circle (3);
+\draw (37.1,-8.2) node {$idle$};
+\draw [black] (55.4,-16.6) circle (3);
+\draw (55.4,-16.6) node {$pream$};
+\draw [black] (61.5,-30.5) circle (3);
+\draw (61.5,-30.5) node {$sop$};
+\draw [black] (55.4,-45.6) circle (3);
+\draw (55.4,-45.6) node {$ctrlmsg$};
+\draw [black] (20.6,-50.8) circle (3);
+\draw (20.6,-50.8) node {$data$};
+\draw [black] (12.2,-39.3) circle (3);
+\draw (12.2,-39.3) node {$crc32$};
+\draw [black] (12.2,-26.1) circle (3);
+\draw (12.2,-26.1) node {$eop$};
+\draw [black] (20.6,-15.4) circle (3);
+\draw (20.6,-15.4) node {$done$};
+\draw [black] (45.7,-53.6) circle (3);
+\draw (45.7,-53.6) node {$type\_ brn$};
+\draw [black] (39.83,-9.45) -- (52.67,-15.35);
+\fill [black] (52.67,-15.35) -- (52.16,-14.56) -- (51.74,-15.47);
+\draw (44.07,-12.92) node [below] {$start$};
+\draw [black] (56.61,-19.35) -- (60.29,-27.75);
+\fill [black] (60.29,-27.75) -- (60.43,-26.82) -- (59.52,-27.22);
+\draw [black] (18.83,-48.38) -- (13.97,-41.72);
+\fill [black] (13.97,-41.72) -- (14.04,-42.66) -- (14.85,-42.07);
+\draw [black] (12.2,-36.3) -- (12.2,-29.1);
+\fill [black] (12.2,-29.1) -- (11.7,-29.9) -- (12.7,-29.9);
+\draw [black] (14.05,-23.74) -- (18.75,-17.76);
+\fill [black] (18.75,-17.76) -- (17.86,-18.08) -- (18.65,-18.7);
+\draw [black] (23.35,-14.2) -- (34.35,-9.4);
+\fill [black] (34.35,-9.4) -- (33.42,-9.26) -- (33.82,-10.18);
+\draw [black] (60.38,-33.28) -- (56.52,-42.82);
+\fill [black] (56.52,-42.82) -- (57.29,-42.26) -- (56.36,-41.89);
+\draw [black] (53.09,-47.51) -- (48.01,-51.69);
+\fill [black] (48.01,-51.69) -- (48.95,-51.57) -- (48.31,-50.8);
+\draw [black] (42.94,-52.42) -- (14.96,-40.48);
+\fill [black] (14.96,-40.48) -- (15.5,-41.25) -- (15.89,-40.33);
+\draw (31.76,-45.91) node [above] {$ctrl=1$};
+\draw [black] (42.72,-53.27) -- (23.58,-51.13);
+\fill [black] (23.58,-51.13) -- (24.32,-51.72) -- (24.43,-50.72);
+\draw (33.81,-51.45) node [above] {$ctrl=0$};
+\end{tikzpicture}
+    \caption{USB CC Rx (read) FSM}
+    \label{fig:usb_phy_rd_fsm}
+\end{figure}
+\begin{enumerate}
+    \item \textbf{Purpose and Functionality}:
+    \begin{enumerate}
+        \item The usb\textunderscore pd\textunderscore phy\textunderscore rd module is part of a USB Power Delivery (USB-PD) implementation.
+        \item It receives data from the BMC (Binary Mark Code) decoder, processes it, and extracts relevant information from USB-PD packets. 
+    \end{enumerate}
+    
+    \item \textbf{Inputs and Outputs}:
+    \begin{enumerate}
+        \item nrst, clock, and enable are control signals.
+        \item bmc\textunderscore din is the input data stream from the BMC decoder.
+        \item rd\textunderscore role, msg\textunderscore id, msg\textunderscore num, msg\textunderscore type, and msg\textunderscore word0 to msg\textunderscore word6 are output signals  containing decoded USB-PD information.
+        \item crc\textunderscore valid indicates whether the CRC (Cyclic Redundancy Check) is valid.
+        \item pkg\textunderscore valid indicates whether a complete USB-PD packet is valid.
+          \item busy indicates the module’s processing state.
+    \end{enumerate}
+    
+    \item \textbf{Finite State Machine (FSM)}:
+    \begin{enumerate}
+        \item The module uses an FSM to handle different stages of USB-PD packet decoding.
+    \item States include fsm\textunderscore idle, fsm\textunderscore preamble, fsm\textunderscore sop, fsm\textunderscore ctrl\textunderscore msg, fsm\textunderscore type\textunderscore brn, fsm\textunderscore msg\textunderscore data, fsm\textunderscore crc32, fsm\textunderscore eop, and fsm\textunderscore done. 
+    \end{enumerate}
+    
+    \item \textbf{Data Processing}:
+    \begin{enumerate}
+        \item The BMC data is converted from 4b5b encoding to 8b10b encoding.
+    \item Control messages are extracted, including role (source/sink), message ID, and message type.
+    \item Message data is collected and assembled.
+    \item CRC calculation and validation are performed.
+    \end{enumerate}
+    
+    \item \textbf{CRC Calculation}:
+    \begin{enumerate}
+        \item The module computes the CRC32 value for the received USB-PD packet.
+    \item The calculated CRC is compared with the received CRC to determine validity. 
+    \end{enumerate}
+    \item \textbf{Packet Completion}:
+        \begin{enumerate}
+            \item The module detects the end of a USB-PD packet using the EOP (End of Packet) signal.
+            \item If the CRC is valid, the packet is considered complete and valid. 
+        \end{enumerate}
+    
+\end{enumerate}
+\subsubsection{usb\textunderscore pd\textunderscore phy\textunderscore wr}
+
+\begin{figure}
+    \centering
+    \begin{center}
+\begin{tikzpicture}[scale=0.2]
+\tikzstyle{every node}+=[inner sep=0pt]
+\draw [black] (37.1,-8.2) circle (3);
+\draw (37.1,-8.2) node {$idle$};
+\draw [black] (55.4,-16.6) circle (3);
+\draw (55.4,-16.6) node {$pream$};
+\draw [black] (61.2,-30.2) circle (3);
+\draw (61.2,-30.2) node {$hdr0$};
+\draw [black] (55.4,-46) circle (3);
+\draw (55.4,-46) node {$hdr1$};
+\draw [black] (37.1,-49.1) circle (3);
+\draw (37.1,-49.1) node {$ctrlmsg$};
+\draw [black] (20.6,-50.8) circle (3);
+\draw (20.6,-50.8) node {$data$};
+\draw [black] (12.2,-39.3) circle (3);
+\draw (12.2,-39.3) node {$crc32$};
+\draw [black] (12.2,-26.1) circle (3);
+\draw (12.2,-26.1) node {$eop$};
+\draw [black] (20.6,-15.4) circle (3);
+\draw (20.6,-15.4) node {$done$};
+\draw [black] (39.83,-9.45) -- (52.67,-15.35);
+\fill [black] (52.67,-15.35) -- (52.16,-14.56) -- (51.74,-15.47);
+\draw (44.07,-12.92) node [below] {$start$};
+\draw [black] (56.58,-19.36) -- (60.02,-27.44);
+\fill [black] (60.02,-27.44) -- (60.17,-26.51) -- (59.25,-26.9);
+\draw [black] (60.17,-33.02) -- (56.43,-43.18);
+\fill [black] (56.43,-43.18) -- (57.18,-42.61) -- (56.24,-42.26);
+\draw [black] (52.44,-46.5) -- (40.06,-48.6);
+\fill [black] (40.06,-48.6) -- (40.93,-48.96) -- (40.76,-47.97);
+\draw [black] (34.12,-49.41) -- (23.58,-50.49);
+\fill [black] (23.58,-50.49) -- (24.43,-50.91) -- (24.33,-49.91);
+\draw (28.27,-49.21) node [above] {$ctrl=0$};
+\draw [black] (18.83,-48.38) -- (13.97,-41.72);
+\fill [black] (13.97,-41.72) -- (14.04,-42.66) -- (14.85,-42.07);
+\draw [black] (12.2,-36.3) -- (12.2,-29.1);
+\fill [black] (12.2,-29.1) -- (11.7,-29.9) -- (12.7,-29.9);
+\draw [black] (14.05,-23.74) -- (18.75,-17.76);
+\fill [black] (18.75,-17.76) -- (17.86,-18.08) -- (18.65,-18.7);
+\draw [black] (23.35,-14.2) -- (34.35,-9.4);
+\fill [black] (34.35,-9.4) -- (33.42,-9.26) -- (33.82,-10.18);
+\draw [black] (53.15,-44.02) -- (22.85,-17.38);
+\fill [black] (22.85,-17.38) -- (23.12,-18.28) -- (23.78,-17.53);
+\draw (40.01,-30.21) node [above] {$hrst$};
+\draw [black] (34.31,-48) -- (14.99,-40.4);
+\fill [black] (14.99,-40.4) -- (15.55,-41.16) -- (15.92,-40.23);
+\draw (27.41,-43.64) node [above] {$ctrl=1$};
+\end{tikzpicture}
+\end{center}
+    \caption{USB CC Tx (write) FSM}
+    \label{fig:usb_top_phy_wr_fsm}
+\end{figure}
+\begin{enumerate}
+    \item \textbf{Purpose and Functionality}
+    \begin{enumerate}
+        \item The \texttt{usb\_pd\_phy\_wr} module is part of a USB Power Delivery (USB-PD) physical layer (PHY) transmitter.
+        \item It handles the encoding and transmission of USB-PD messages over the physical medium.
+    \end{enumerate}
+
+    \item \textbf{State Machine}
+    \begin{enumerate}
+        \item The module operates using a finite state machine (FSM) with several states:
+        \begin{enumerate}
+            \item \texttt{fsm\_idle}: Initial state, waiting for a start signal.
+            \item \texttt{fsm\_preamble}: Sends the preamble before the actual data.
+            \item \texttt{fsm\_hdr0} and \texttt{fsm\_hdr1}: Handles header information.
+            \item \texttt{fsm\_ctrl\_msg}: Processes control messages.
+            \item \texttt{fsm\_data}: Transmits data.
+            \item \texttt{fsm\_crc32}: Computes CRC32 for error checking.
+            \item \texttt{fsm\_eop}: Adds the end-of-packet marker.
+            \item \texttt{fsm\_done}: Final state, completing the transmission.
+        \end{enumerate}
+    \end{enumerate}
+
+    \item \textbf{Data Flow}
+    \begin{enumerate}
+        \item The module receives input signals (\texttt{start}, \texttt{send\_id}, \texttt{send\_num}, etc.) to configure and transmit USB-PD messages.
+        \item It encodes the data using 4b5b encoding (\texttt{enc\_4b5b}) and prepares it for transmission.
+        \item CRC32 is computed for error detection.
+        \item The encoded data is sent to the BMC encoder (\texttt{bmc\_encoder}) for modulation.
+        \item The \texttt{bmc\_dout} signal carries the modulated data.
+    \end{enumerate}
+
+    \item \textbf{Control Messages}
+    \begin{enumerate}
+        \item The \texttt{ctrl\_msg\_r} signal holds control message information (e.g., message type, number, etc.).
+        \item The \texttt{send\_word\_r} array stores the actual data words to be transmitted.
+    \end{enumerate}
+
+    \item \textbf{Clock and Reset}
+    \begin{enumerate}
+        \item The module operates on a clock (\texttt{clock}) and has a reset signal (\texttt{nrst}).
+        \item The \texttt{busy} signal indicates whether the module is busy transmitting.
+    \end{enumerate}
+
+    \item \textbf{4b5b Encoding}
+    \begin{enumerate}
+        \item The \texttt{enc\_4b5b} module converts 4-bit data to 5-bit data using a predefined encoding table.
+        \item The \texttt{enc4b5b\_sel} and \texttt{enc4b5b\_data} signals control the encoding process.
+    \end{enumerate}
+
+    \item \textbf{CRC32 Calculation}
+    \begin{enumerate}
+        \item The \texttt{crc32} module computes the CRC32 value for error checking.
+        \item The \texttt{crc\_en} and \texttt{crc\_data} signals control the CRC calculation.
+    \end{enumerate}
+
+    \item \textbf{End of Packet (EOP)}
+    \begin{enumerate}
+        \item The module adds an EOP marker after the data transmission.
+    \end{enumerate}
+
+    \item \textbf{Soft Reset and Flush}
+    \begin{enumerate}
+        \item The \texttt{flush\_r} signal is used to reset the module.
+        \item The \texttt{sop\_hrst} signal indicates a hardware reset.
+    \end{enumerate}
+
+    \item \textbf{Output}
+    \begin{enumerate}
+        \item The \texttt{bmc\_dout} signal carries the modulated data for transmission.
+    \end{enumerate}
+\end{enumerate}
+\subsubsection{enc\textunderscore4b5b }
+\begin{enumerate}
+    \item \textbf{Purpose:}
+    \begin{enumerate}
+        \item The \texttt{enc\_4b5b} module performs 4B5B encoding, which is commonly used in communication protocols like USB Power Delivery (USB-PD).
+    \end{enumerate}
+
+    \item \textbf{Inputs:}
+    \begin{enumerate}
+        \item \texttt{din}: A 4-bit input representing the data to be encoded.
+        \item \texttt{ext\_sel}: An external select signal (not defined in this module).
+    \end{enumerate}
+
+    \item \textbf{Outputs:}
+    \begin{enumerate}
+        \item \texttt{dout}: A 5-bit output representing the encoded data.
+    \end{enumerate}
+
+    \item \textbf{Encoding Logic:}
+    \begin{enumerate}
+        \item The module uses a lookup table (\texttt{lut\_4b5b}) to map each 4-bit input to a 5-bit output.
+        \item The lookup table contains 22 entries, covering all possible 4-bit input combinations.
+        \item Entries 0 to 15 represent the standard 4B5B encoding.
+        \item Entries 16 to 21 handle special control codes (sync, reset, and end-of-packet).
+    \end{enumerate}
+
+    \item \textbf{Example:}
+    \begin{enumerate}
+        \item For input \texttt{din = 4'b0010}, the corresponding output \texttt{dout} is \texttt{5'b01010}.
+    \end{enumerate}
+
+    \item \textbf{Special Codes:}
+    \begin{enumerate}
+        \item Sync-1: \texttt{dout = 5'b11000}
+        \item Sync-2: \texttt{dout = 5'b10001}
+        \item Reset-1: \texttt{dout = 5'b00111}
+        \item Reset-2: \texttt{dout = 5'b11001}
+        \item End-of-Packet: \texttt{dout = 5'b01101}
+    \end{enumerate}
+\end{enumerate}
+\subsubsection{dec\textunderscore4b5b}
+\begin{enumerate}
+    \item \textbf{Purpose:}
+    \begin{enumerate}
+        \item The \texttt{dec\_4b5b} module performs 4B5B decoding, which is a line coding technique used in communication systems.
+    \end{enumerate}
+
+    \item \textbf{Input and Output:}
+    \begin{enumerate}
+        \item \texttt{din}: A 5-bit input representing the encoded data.
+        \item \texttt{kcode}: A 1-bit output indicating whether the input represents a control character (K-code).
+        \item \texttt{dout}: A 4-bit output representing the decoded data.
+    \end{enumerate}
+
+    \item \textbf{Decoding Logic:}
+    \begin{enumerate}
+        \item The module uses a case statement to map the 5-bit input (\texttt{din}) to the corresponding 4-bit output (\texttt{dout}).
+        \item For example, \texttt{5'b11110} maps to \texttt{4'd0}, \texttt{5'b01001} maps to \texttt{4'd1}, and so on.
+        \item Control characters (sync, reset, EOP) are also handled.
+    \end{enumerate}
+
+    \item \textbf{K-Code Detection:}
+    \begin{enumerate}
+        \item The \texttt{kcode} output is set to 1 when the input corresponds to a K-code (sync, reset, EOP), and 0 otherwise.
+    \end{enumerate}
+
+    \item \textbf{Example:}
+    \begin{enumerate}
+        \item If \texttt{din} is \texttt{5'b11110}, \texttt{dout} will be \texttt{4'd0}, and \texttt{kcode} will be 1 (since it’s a sync character).
+    \end{enumerate}
+\end{enumerate}
+
+\subsubsection{CRC32}
+\begin{enumerate}
+    \item \textbf{Purpose and Functionality:}
+    \begin{enumerate}
+        \item The \texttt{crc32} module computes the Cyclic Redundancy Check (CRC) value for error detection in USB Power Delivery (USB-PD) communication.
+        \item CRC is a common technique used to verify data integrity during transmission.
+    \end{enumerate}
+
+    \item \textbf{Inputs and Outputs:}
+    \begin{enumerate}
+        \item \texttt{clk}: The clock signal.
+        \item \texttt{rst\_n}: The active-low reset signal.
+        \item \texttt{data\_in}: A 32-bit input representing the data for which the CRC is computed.
+        \item \texttt{crc\_out}: A 32-bit output representing the computed CRC value.
+    \end{enumerate}
+
+    \item \textbf{CRC32 Algorithm:}
+    \begin{enumerate}
+        \item The module uses the CRC32 polynomial (\texttt{0x04C11DB7}) for computation.
+        \item The algorithm processes the input data in chunks of 32 bits.
+        \item For each chunk, it performs bitwise XOR operations and shifts to calculate the CRC value.
+        \item The final CRC value is stored in \texttt{crc\_out}.
+    \end{enumerate}
+
+    \item \textbf{Shift Register Implementation:}
+    \begin{enumerate}
+        \item The \texttt{crc32} module uses a shift register approach.
+        \item It shifts the data bits through the register, applying XOR operations based on the polynomial.
+        \item The initial value of the shift register is set to all zeros.
+    \end{enumerate}
+
+    \item \textbf{Feedback Polynomial:}
+    \begin{enumerate}
+        \item The polynomial \texttt{0x04C11DB7} corresponds to the CRC32 standard.
+        \item It is represented as \(x^{32} + x^{26} + x^{23} + x^{22} + x^{16} + x^{12} + x^{11} + x^{10} + x^8 + x^7 + x^5 + x^4 + x^2 + x + 1\).
+    \end{enumerate}
+
+    \item \textbf{Initialization and Finalization:}
+    \begin{enumerate}
+        \item The module initializes the shift register with zeros.
+        \item After processing all data bits, the final CRC value is available in \texttt{crc\_out}.
+    \end{enumerate}
+
+    \item \textbf{Usage:}
+    \begin{enumerate}
+        \item In USB-PD communication, the transmitter computes the CRC for transmitted packets, and the receiver verifies it.
+        \item If the computed CRC matches the received CRC, the data is considered valid.
+    \end{enumerate}
+\end{enumerate}
+
+\subsubsection{cc\textunderscore line}
+\begin{enumerate}
+    \item \textbf{Purpose and Functionality:}
+    \begin{enumerate}
+        \item The \texttt{cc\_line} module is related to USB Power Delivery (USB-PD) communication.
+        \item It handles the CC (Configuration Channel) lines in a USB Type-C connector.
+        \item The CC lines are used for device detection, negotiation, and power role determination.
+    \end{enumerate}
+
+    \item \textbf{Inputs and Outputs:}
+    \begin{enumerate}
+        \item \texttt{cc1}: Input representing the voltage level on CC1 line.
+        \item \texttt{cc2}: Input representing the voltage level on CC2 line.
+        \item \texttt{cc\_sel}: Output indicating the selected CC line (1 or 2).
+        \item \texttt{cc\_vbus}: Output indicating whether VBUS (power supply) is present.
+    \end{enumerate}
+
+    \item \textbf{Functionality:}
+    \begin{enumerate}
+        \item The module detects the voltage levels on \texttt{cc1} and \texttt{cc2} lines.
+        \item If both lines are at the same voltage (e.g., both high or both low), it selects one of them (usually \texttt{cc1}).
+        \item If the lines have different voltages (indicating a connected device), it selects the line with higher voltage.
+        \item The \texttt{cc\_vbus} output reflects whether VBUS (power) is available based on the selected CC line.
+    \end{enumerate}
+
+    \item \textbf{Role Determination:}
+    \begin{enumerate}
+        \item The voltage levels on CC lines help determine the device’s role (source or sink) in USB-PD.
+        \item For example:
+        \begin{enumerate}
+            \item If \texttt{cc1} > \texttt{cc2}, the device is a source (providing power).
+            \item If \texttt{cc2} > \texttt{cc1}, the device is a sink (drawing power).
+        \end{enumerate}
+    \end{enumerate}
+
+    \item \textbf{Voltage Levels:}
+    \begin{enumerate}
+        \item The voltage levels on CC lines can be:
+        \begin{enumerate}
+            \item High (around 3.3V) when connected to a source.
+            \item Low (around 0V) when connected to a sink.
+            \item Floating (open circuit) when unplugged.
+        \end{enumerate}
+    \end{enumerate}
+
+    \item \textbf{VBUS Detection:}
+    \begin{enumerate}
+        \item The \texttt{cc\_vbus} output indicates whether VBUS (power) is available based on the selected CC line.
+        \item If VBUS is present, the device can negotiate power contracts.
+    \end{enumerate}
+\end{enumerate}
+
+\subsubsection{bmc\textunderscore encoder}
+\begin{enumerate}
+    \item \textbf{Purpose and Functionality:}
+    \begin{enumerate}
+        \item The \texttt{bmc\_encoder} module is crucial for USB Power Delivery (USB-PD) communication.
+        \item It performs BMC (Biphase Mark Coding) encoding, which is a line coding technique used in USB-PD.
+    \end{enumerate}
+
+    \item \textbf{Inputs and Outputs:}
+    \begin{enumerate}
+        \item \texttt{data\_in}: A 4-bit input representing the data to be encoded.
+        \item \texttt{clk}: The clock signal.
+        \item \texttt{bmc\_dout}: A 2-bit output representing the encoded BMC data.
+    \end{enumerate}
+
+    \item \textbf{Biphase Mark Coding (BMC):}
+    \begin{enumerate}
+        \item BMC is a modulation technique where each data bit is encoded into two symbols (phases).
+        \item The transitions between these phases carry information.
+        \item In BMC, a 0-bit is represented by a transition (change) in the middle of a bit period, and a 1-bit is represented by no transition.
+    \end{enumerate}
+
+    \item \textbf{Encoding Logic:}
+    \begin{enumerate}
+        \item The module uses a simple lookup table or combinatorial logic to perform BMC encoding.
+        \item For each 4-bit input, it generates the corresponding 2-bit BMC output.
+        \item The output depends on the current and previous data bits.
+    \end{enumerate}
+
+    \item \textbf{Example:}
+    \begin{enumerate}
+        \item If \texttt{data\_in} is \texttt{4'b0010}, the corresponding BMC output (\texttt{bmc\_dout}) might be \texttt{2'b01}.
+    \end{enumerate}
+
+    \item \textbf{Usage in USB-PD:}
+    \begin{enumerate}
+        \item BMC encoding is used in USB-PD communication for transmitting data over the CC (Configuration Channel) lines.
+        \item It ensures reliable data transmission and synchronization between devices.
+    \end{enumerate}
+\end{enumerate}
+
+\subsubsection{bmc\textunderscore decoder}
+\begin{enumerate}
+    \item \textbf{Purpose and Functionality:}
+    \begin{enumerate}
+        \item The \texttt{bmc\_decoder} module is essential for USB Power Delivery (USB-PD) communication.
+        \item It performs BMC (Biphase Mark Coding) decoding, which is a line coding technique used in USB-PD.
+    \end{enumerate}
+
+    \item \textbf{Inputs and Outputs:}
+    \begin{enumerate}
+        \item \texttt{bmc\_in}: A 2-bit input representing the encoded BMC data.
+        \item \texttt{clk}: The clock signal.
+        \item \texttt{data\_out}: A 4-bit output representing the decoded data.
+    \end{enumerate}
+
+    \item \textbf{Biphase Mark Coding (BMC):}
+    \begin{enumerate}
+        \item BMC is a modulation technique where each data bit is encoded into two symbols (phases).
+        \item The transitions between these phases carry information.
+        \item In BMC, a 0-bit is represented by a transition (change) in the middle of a bit period, and a 1-bit is represented by no transition.
+    \end{enumerate}
+
+    \item \textbf{Decoding Logic:}
+    \begin{enumerate}
+        \item The module uses a lookup table or combinatorial logic to perform BMC decoding.
+        \item For each 2-bit input (\texttt{bmc\_in}), it generates the corresponding 4-bit output (\texttt{data\_out}).
+        \item The output depends on the current and previous BMC symbols.
+    \end{enumerate}
+
+    \item \textbf{Example:}
+    \begin{enumerate}
+        \item If \texttt{bmc\_in} is \texttt{2'b01}, the corresponding \texttt{data\_out} might be \texttt{4'b0010}.
+    \end{enumerate}
+
+    \item \textbf{Usage in USB-PD:}
+    \begin{enumerate}
+        \item BMC decoding is used in USB-PD communication to recover transmitted data from the received BMC-encoded signal.
+        \item It ensures reliable data reception and synchronization between devices.
+    \end{enumerate}
+\end{enumerate}
+
+\subsubsection{usb\textunderscore pd\textunderscore top}
+\begin{enumerate}
+    \item \textbf{Purpose and Functionality:}
+    \begin{enumerate}
+        \item The \texttt{usb\_pd\_top} module serves as the top-level design for a USB Power Delivery (USB-PD) system.
+        \item It integrates various submodules to create a complete USB-PD solution.
+    \end{enumerate}
+
+    \item \textbf{Submodules Integration:}
+    \begin{enumerate}
+        \item The \texttt{usb\_pd\_top} module instantiates and connects other modules responsible for different aspects of USB-PD communication.
+        \item These submodules include BMC encoding/decoding, CRC computation, CC line handling, and more.
+    \end{enumerate}
+
+    \item \textbf{High-Level Overview:}
+    \begin{enumerate}
+        \item The \texttt{usb\_pd\_top} module orchestrates the entire USB-PD communication process.
+        \item It interfaces with external components (such as USB-C connectors) and internal FPGA resources.
+    \end{enumerate}
+
+    \item \textbf{Functional Blocks:}
+    \begin{enumerate}
+        \item The \texttt{usb\_pd\_top} module likely includes the following functional blocks: 
+        \begin{enumerate}
+            \item BMC encoding and decoding: Converts data between binary and BMC-encoded formats.
+            \item CRC computation: Calculates the CRC value for error detection.
+            \item CC line handling: Detects connected devices and determines their roles (source or sink).
+            \item Voltage regulation: Sets the output voltage based on USB-PD negotiation.
+            \item State machine: Manages the USB-PD protocol states (e.g., discovery, negotiation, power delivery).
+        \end{enumerate}
+    \end{enumerate}
+\end{enumerate}
+
 \subsection{Synthesis}
+\begin{figure}
+    \centering
+    \includegraphics[width=1\linewidth]{Chapter4/usb_top_syn.png}
+    \caption{Elaborated Netlist post Synthesis}
+    \label{fig:usb_top_syn}
+\end{figure}
+
+The synthesis of the Register Transfer Level (RTL) design for the power delivery controller is a critical step in the digital design flow. This process involves transforming the high-level RTL description into a gate-level netlist, which can then be used for physical design and implementation. The synthesis process ensures that the design meets the required specifications in terms of functionality, timing, and area.
+
+\begin{enumerate}
+    \item The primary objectives of the synthesis process are the following:
+    \item Functional Correctness: Ensuring that the synthesized netlist accurately represents the intended functionality described in the RTL.
+    \item Timing Closure: Meeting the timing constraints specified for the design, including setup and hold times.
+    \item Area Optimization: Minimizing the silicon area required for the implementation while maintaining performance and power efficiency.
+\end{enumerate}
+
+Figure \ref{fig:usb_top_syn} illustrates the elaborated netlist after the synthesis process. This netlist represents the detailed gate-level implementation of the power delivery controller, showing the interconnections between various standard cells. The figure highlights the hierarchical structure of the design, with different modules and their interconnections clearly depicted.
 \subsection{Place and Route}
-\subsection{Timing Analysis}
+\subsubsection{Floorplanning}
+\begin{figure}[ht]
+    \centering
+    \includegraphics[width=0.5\linewidth]{Chapter4/fp.png}
+    \caption{Logical Partitioning of Controller}
+    \label{fig:fp_pdc}
+\end{figure}
+\begin{figure}[ht]
+    \centering
+    \includegraphics[width=0.5\linewidth]{Chapter4/postroute.png}
+    \caption{Post-route view of Controller}
+    \label{fig:post_route}
+\end{figure}
+This initial step involves defining the layout of the chip, including the placement of macros, I/O pads, and power grids. The floorplan sets the stage for efficient placement and routing by organizing the design into logical partitions.
 
-\vspace{0.75cm}
+Figure \ref{fig:fp_pdc} illustrates the logical partitioning of the power delivery controller design. It shows how different functional blocks are organized within the chip, ensuring that related components are placed close to each other to minimize interconnect delays.
 
- \textbf{The chapters should not end with figures, instead bring the paragraph explaining about the figure at the end followed by a summary paragraph.}
-\section{Power Supply}
-After elaborating the various sections of the chapter (From Chapter 2 onwards), a summary paragraph should be written discussing the highlights of that particular chapter. This summary paragraph should not be numbered separately. This paragraph should connect the present chapter to the next chapter. 
-\subsection{Voltage Regulation}
-\subsection{Current Regulation}
-\section{Register Bank}
+\subsubsection{Placement}
+
+During this step, the standard cells are placed within the defined floorplan. The placement tool optimizes the position of each cell to meet timing and area constraints. The goal is to minimize the total wire length and ensure that the design meets the required performance.
+
+\subsubsection{Clock Tree Synthesis (CTS)}
+\begin{figure}
+    \centering
+    \includegraphics[width=0.6\linewidth]{Chapter4/cts.png}
+    \caption{CTS Implementation}
+    \label{fig:cts}
+\end{figure}
+
+CTS is a critical step that involves designing the clock distribution network. The objective is to distribute the clock signal evenly across the chip with minimal skew and jitter. This ensures that all sequential elements receive the clock signal simultaneously, maintaining synchronization across the design.
+
+Figure \ref{fig:cts} shows the implementation of the clock tree synthesis for the power delivery controller. It highlights the clock distribution network and the placement of clock buffers and inverters to achieve balanced clock distribution.
+
+\subsubsection{Routing}
+In this step, the interconnections between the placed cells are established. The routing tool creates metal wires to connect the inputs and outputs of the cells according to the netlist. The routing process must avoid congestion and ensure signal integrity by minimizing crosstalk and resistance.
+
+Figure \ref{fig:post_route} This figure presents the post-route view of the power delivery controller design. It shows the completed routing of interconnections, highlighting the metal layers and vias used to connect the cells.
+
+\subsubsection{Optimization and Verification}
+\begin{figure}
+    \centering
+    \includegraphics[width=0.75\linewidth]{Chapter4/clktree.png}
+    \caption{Optimised clock tree}
+    \label{fig:clktree}
+\end{figure}
+The clock paths to the read and write modules are optimized using a flexible H-tree approach. This method ensures minimal clock skew and jitter, enhancing the performance of timing-sensitive modules. Non-timing sensitive modules, such as the CRC module, are not optimized to save resources.
+
+Figure \ref{fig:clktree} shows the optimized clock tree. The clock paths to the read and write modules are optimized using a flexible H-tree approach, whereas non-timing sensitive modules like the CRC are not optimized.
+
+
+After routing, the design undergoes optimization to improve timing, power, and area. This includes fixing any timing violations, reducing power consumption, and minimizing the chip area. The design is then verified through various checks, including design rule checks (DRC), layout versus schematic (LVS) checks, and timing analysis.
+
+
+
+\subsection{Power Supply}
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.5\linewidth]{Chapter4/opcore.png}
+    \caption{OPamp Core}
+    \label{fig:opcore}
+\end{figure}
+The opamp core (figure \ref{fig:opcore}) is a fundamental building block in analog circuit design, crucial for amplifying signals. This layout typically includes differential input pairs, current mirrors, and output stages. The differential input pairs ensure high input impedance and common-mode rejection, while current mirrors provide biasing and load for the differential pairs. The output stage, often a class AB amplifier, ensures sufficient drive capability and linearity. The layout must minimize parasitic capacitances and resistances to maintain high-frequency performance and stability. Proper placement of transistors and routing of interconnections are essential to reduce noise and crosstalk. The layout also includes decoupling capacitors to filter out power supply noise, ensuring a clean and stable operation. Overall, the opamp core layout is designed to achieve high gain, bandwidth, and linearity, making it suitable for various analog applications.
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.5\linewidth]{Chapter4/opamp.png}
+    \caption{Layout of Opamp with improved swing}
+    \label{fig:opamp}
+\end{figure}
+The opamp with improved swing (figure \ref{fig:opamp}) enhances the basic opamp design by increasing the output voltage range. This is achieved by incorporating techniques such as bootstrapping or using a rail-to-rail output stage. Bootstrapping involves using additional circuitry to elevate the voltage levels of certain nodes, allowing the output to swing closer to the supply rails. A rail-to-rail output stage uses complementary transistors to achieve a full voltage swing from the positive to the negative supply rail. The layout must ensure that these additional components are placed optimally to avoid performance degradation. This includes careful routing to minimize parasitic effects and ensuring thermal stability. The improved swing opamp is particularly useful in low-voltage applications where maximizing the output range is critical. It provides better signal-to-noise ratio and dynamic range, making it ideal for precision analog circuits.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.8\linewidth]{Chapter4/ldo_core.png}
+    \caption{LDO Core}
+    \label{fig:ldo_core}
+\end{figure}
+
+The LDO (Low Dropout Regulator) core (figure \ref{fig:ldo_core}) is designed to provide a stable output voltage with minimal input-to-output voltage difference. The LDO core typically includes a pass transistor, error amplifier, and feedback network. The pass transistor, usually a PMOS or NMOS, regulates the output voltage by varying its resistance. The error amplifier compares the output voltage with a reference voltage and adjusts the pass transistor’s gate voltage to maintain a constant output. The feedback network ensures stability and accurate voltage regulation. The layout must minimize the parasitic resistances and capacitances to achieve fast transient response and low output noise. Proper thermal management is also crucial to prevent overheating and ensure reliable operation.
+
+
+
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.7\linewidth]{Chapter4/PS_lyt.png}
+    \caption{Layout view of Powercells for Buck Regulator and LDO}
+    \label{fig:lyt_pc}
+\end{figure}
+The PMOS in powercell configuration (figure \ref{fig:lyt_pc}) is a critical design choice for handling large currents, such as those up to 5A in buck converters and LDO pass transistors. This configuration involves using multiple PMOS transistors in parallel to distribute the current load evenly across the devices. By doing so, it reduces the overall resistance and power dissipation, which is crucial for maintaining efficiency and thermal stability. The layout of the powercell configuration must ensure that each PMOS transistor shares the current equally, which involves careful matching of the transistors and minimizing the parasitic resistances in the interconnections. This approach not only enhances the current-handling capability but also improves the reliability and longevity of the circuit.
+
+In the context of a buck converter, the PMOS powercell configuration is particularly advantageous. Buck converters are used to step down voltage levels efficiently, and the switch (typically a PMOS transistor) plays a vital role in this process. By using a powercell configuration, the switch can handle higher currents without significant voltage drops or excessive heat generation. This is essential for maintaining the converter’s efficiency, especially in high-power applications. The layout must also consider the switching speed and minimize the gate capacitance to ensure fast and efficient operation. Proper thermal management, such as using heat sinks or thermal vias, is also crucial to dissipate the heat generated during operation.
+
+For LDO pass transistors, the powercell configuration ensures that the regulator can provide a stable output voltage even under high current loads. The pass transistor in an LDO regulates the output voltage by varying its resistance, and handling large currents can lead to significant power dissipation. By using multiple PMOS transistors in parallel, the powercell configuration reduces the overall resistance and distributes the heat generated, preventing any single transistor from overheating. This improves the thermal performance and reliability of the LDO. The layout must ensure that the transistors are placed close together to minimize parasitic inductances and resistances, which can affect the regulator’s performance. Additionally, careful routing of the power and ground connections is essential to maintain a low-noise and stable output.
+
 \section{Integration}
+    
+
 \subsection{System Integration}
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.5\linewidth]{Chapter4/layout_all.png}
+    \caption{Integrated Chip (Routing and Fills not shown)}
+    \label{fig:lyt_all}
+\end{figure}
+
+The figure \ref{fig:lyt_all} showcases the layout of an integrated chip (IC) with various functional blocks, each playing a crucial role in the overall operation of the device. At the center of the layout is a small red block, identified as the power delivery controller. This controller, designed using Innous digital flow, is responsible for managing and distributing power efficiently across the IC. It ensures that each component receives the appropriate voltage and current, which is essential for the stable and reliable operation of the entire system. The power delivery controller integrates various control algorithms and feedback mechanisms to maintain optimal power distribution, adapting to different load conditions and minimizing power losses.
+
+Above the power delivery controller, there are three large blocks representing PMOS powercells for the buck converter, LDO (Low Dropout Regulator), and current regulator. These powercells are designed to handle large currents, up to 5A, by using multiple PMOS transistors in parallel. This configuration helps distribute the current load evenly, reducing overall resistance and power dissipation. The buck converter powercell is responsible for stepping down the input voltage to a lower level efficiently, while the LDO powercell provides a stable output voltage with minimal input-to-output voltage difference. The current regulator powercell ensures precise control of the current flowing through the circuit, which is critical for applications requiring constant current supply.
+
+Directly below these powercells are the gate driver and supportive circuits. The gate driver circuits are essential for controlling the switching of the PMOS transistors within the powercells. They provide the necessary gate drive voltage and current to turn the transistors on and off efficiently, ensuring fast switching speeds and minimizing switching losses. The supportive circuits include various components such as level shifters, buffers, and protection circuits that enhance the performance and reliability of the gate drivers. Proper placement and routing of these circuits are crucial to minimize parasitic effects and ensure stable operation under high current conditions.
+
+To the side of the power delivery controller, there is a small blue block identified as the PWM (Pulse Width Modulation) generator macro. The PWM generator is used to control the duty cycle of the switching transistors in the buck converter, regulating the output voltage by adjusting the on-time and off-time of the transistors. This allows for efficient power conversion and precise voltage regulation. The smallest block to the left of the power delivery controller is the quad SPI (Serial Peripheral Interface) register block. This block facilitates high-speed data transfer between the microcontroller and peripheral devices or between different microcontroller systems within the IC. The quad SPI interface supports multiple data lines, enabling faster communication and reducing the overall latency in data transfer. Proper integration and layout of these blocks are essential to ensure efficient operation and high performance of the integrated chip.
 \subsection{Interface Design}
+The PD Controller interfaces with external devices through the CC1 and CC2 pins, which are used for communication control lines, and the VCONN pin for power delivery. These connections ensure that the chip can communicate with and control external USB devices, providing the necessary power and data transfer capabilities.
+
+The Buck Converter is a crucial component in the chip, responsible for stepping down the input voltage (Vin) to a lower, regulated output voltage (V\_Buck). The Buck Converter interfaces with the external LC filter through the L1 and L2 pins, which help filter out noise and ripple, ensuring a clean and stable output voltage. The feedback loop from the LDO to the Buck Converter (V\_FB) ensures precise voltage regulation by continuously monitoring and adjusting the output voltage. This feedback mechanism is essential for maintaining the desired voltage levels under varying load conditions.
+
+The LDO (Low Dropout Regulator) and Current Regulation blocks work together to provide stable and precise voltage and current outputs. The LDO receives the output from the Buck Converter and further regulates it to a lower voltage (V\_Test), which is then fed into the DAC (Digital-to-Analog Converter) and the Current Regulation block. The DAC converts digital signals (V\_prog) into analog voltages, which are used to program the output voltage and current levels. The Current Regulation block ensures that the output current (VBUS) is precisely controlled, which is critical for applications requiring constant current supply.
+
+The Quad-SPI Register Bank facilitates high-speed data transfer between the PD Controller and external devices. It includes multiple SDIO (Serial Data Input/Output) pins and an SS (Slave Select) pin, enabling efficient communication and data exchange. The PWM (Pulse Width Modulation) Generator Macro generates PWM signals to control the duty cycle of the switching transistors in the Buck Converter, regulating the output voltage by adjusting the on-time and off-time of the transistors. Additional pins such as EN (Enable), SYS\_CLK (System Clock), and MODE are used for configuration and control, ensuring the chip operates correctly and efficiently under various conditions.
+
 \subsection{Integration Challenges}
+
+The integration of the power delivery controller and compliant power supply for USB Power Delivery involves several challenges that need to be addressed to ensure a robust and efficient design.
+
+\begin{enumerate}
+    \item \textbf{Signal Integrity and Crosstalk:} One of the primary challenges in integrating the chip is maintaining signal integrity while minimizing crosstalk. As the design involves numerous interconnections between various modules, ensuring that signals do not interfere with each other is crucial. This requires careful routing and the use of shielding techniques to prevent noise and signal degradation.
+    
+    \item \textbf{Power Management:} Efficient power management is critical for the performance and reliability of the chip. Integrating the power supply components, such as the Low Dropout (LDO) regulator and the buck converter, requires careful consideration of power distribution, thermal management, and voltage regulation. Ensuring that the power supply can handle varying loads and provide stable output is essential for the overall functionality of the system.
+    
+    \item \textbf{Timing and Synchronization:} Achieving precise timing and synchronization across different modules is another significant challenge. The clock distribution network must be designed to minimize clock skew and jitter, ensuring that all sequential elements receive the clock signal simultaneously. This involves optimizing the clock tree and using techniques like H-tree structures to balance the clock distribution.
+    
+    \item \textbf{Layout and Area Optimization:} The physical layout of the chip must be optimized to minimize area while ensuring that all components are placed efficiently. This involves careful floorplanning, placement, and routing to avoid congestion and ensure that the design meets the required performance metrics. Balancing the trade-offs between area, power, and performance is a complex task that requires iterative optimization and verification.
+\end{enumerate}
 %\section{Validation and Testing}
+This chapter details the design of the power supply circuit using Cadence Virtuoso and the controller through digital PNR flow. It emphasizes minimizing circuit area while maintaining performance. Pre-layout and post-layout AMS simulations are conducted using Spectre AMS to verify performance metrics like output voltage, current regulation, and stability. Parasitics are extracted using Quantus RC and back-annotated to the schematic to ensure accurate performance evaluation. The chapter concludes with a comparison of the design’s integration challenges.
